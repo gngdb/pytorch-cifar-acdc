@@ -15,7 +15,7 @@ import argparse
 
 from models import *
 from utils import progress_bar
-
+from prototypical import PrototypicalLoss
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
@@ -75,15 +75,16 @@ if args.resume:
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 
-criterion = nn.CrossEntropyLoss()
+criterion = PrototypicalLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
 # Training
 def train(epoch):
     print('\nEpoch: %d' % epoch)
     net.train()
+    criterion.train()
     train_loss = 0
-    correct = 0
+    accuracy = 0
     total = 0
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.to(device), targets.to(device)
@@ -91,21 +92,22 @@ def train(epoch):
         outputs = net(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
+        nn.utils.clip_grad_norm(net.parameters(), 5.)
         optimizer.step()
 
         train_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
+        accuracy += criterion.acc
+        total += 1.
 
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-            % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%%'
+            % (train_loss/(batch_idx+1), accuracy/total ))
 
 def test(epoch):
     global best_acc
     net.eval()
+    criterion.eval()
     test_loss = 0
-    correct = 0
+    accuracy = 0
     total = 0
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
@@ -114,15 +116,14 @@ def test(epoch):
             loss = criterion(outputs, targets)
 
             test_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
+            accuracy += criterion.acc
+            total += 1.
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%%'
+                % (test_loss/(batch_idx+1), accuracy/total))
 
     # Save checkpoint.
-    acc = 100.*correct/total
+    acc = accuracy/total
     if acc > best_acc:
         print('Saving..')
         state = {
