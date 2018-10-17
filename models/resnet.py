@@ -10,26 +10,48 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch_dct.layers import StackedConvACDC
+from torch_dct.layers import FastStackedConvACDC as StackedConvACDC
+
 
 class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, in_planes, planes, stride=1):
         super(BasicBlock, self).__init__()
-        #self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-        self.conv1 = StackedConvACDC(in_planes, planes, kernel_size=3, n_layers=6, stride=stride, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        #self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv2 = StackedConvACDC(planes, planes, kernel_size=3, n_layers=6, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
-                #nn.MaxPool2d(stride),
+                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+
+class ACDCBasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(ACDCBasicBlock, self).__init__()
+        self.conv1 = StackedConvACDC(in_planes, planes, kernel_size=3, n_layers=12, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = StackedConvACDC(planes, planes, kernel_size=3, n_layers=12, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
                 StackedConvACDC(in_planes, self.expansion*planes, kernel_size=1, n_layers=12, stride=stride, bias=False),
-                #nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, bias=False),
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
@@ -104,6 +126,9 @@ class ResNet(nn.Module):
 
 def ResNet18():
     return ResNet(BasicBlock, [2,2,2,2])
+
+def ACDCResNet18():
+    return ResNet(ACDCBasicBlock, [2,2,2,2])
 
 def ResNet34():
     return ResNet(BasicBlock, [3,4,6,3])
