@@ -29,7 +29,7 @@ def is_pruned(layer):
 def is_leaf(model):
     return get_num_gen(model.children()) == 0
 
-from torch_dct.layers import FastStackedConvACDC, ConvACDC
+from pytorch_acdc.layers import FastStackedConvACDC, ConvACDC
 
 def is_acdc(layer):
     return isinstance(layer, FastStackedConvACDC) or isinstance(layer, ConvACDC)
