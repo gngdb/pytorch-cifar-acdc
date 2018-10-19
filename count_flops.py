@@ -107,6 +107,7 @@ def measure_layer(layer, x):
         # do as many additions as we have channels
         delta_ops += x.size(1)
 
+    ### ACDC Convolution
     elif type_name in ['FastStackedConvACDC']:
         out_h = int((x.size()[2] + 2 * layer.padding[0] - layer.kernel_size[0]) /
                     layer.stride[0] + 1)
@@ -116,6 +117,21 @@ def measure_layer(layer, x):
         N = max(layer.out_channels, layer.in_channels) # size of ACDC layers
         acdc_ops = 4*N + 5*N*math.log(N,2)
         conv_ops = N * N * layer.kernel_size[0] *  \
+                   layer.kernel_size[1]  / layer.groups
+        ops = min(acdc_ops, conv_ops)
+        delta_ops += ops*out_h*out_w
+        delta_params += 2*N
+
+    ### Grouped ACDC Convolution
+    elif type_name in ['GroupedConvACDC']:
+        out_h = int((x.size()[2] + 2 * layer.padding[0] - layer.kernel_size[0]) /
+                    layer.stride[0] + 1)
+        out_w = int((x.size()[3] + 2 * layer.padding[1] - layer.kernel_size[1]) /
+                    layer.stride[1] + 1)       
+        # pretend we're actually passing through the ACDC layers within
+        N = layer.kernel_size[0]
+        acdc_ops = layer.groups*(4*N + 5*N*math.log(N,2))
+        conv_ops = layer.in_channels * layer.out_channels * layer.kernel_size[0] *  \
                    layer.kernel_size[1]  / layer.groups
         ops = min(acdc_ops, conv_ops)
         delta_ops += ops*out_h*out_w
