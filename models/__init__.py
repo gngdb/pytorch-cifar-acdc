@@ -9,3 +9,6 @@ from .googlenet import *
 from .mobilenet import *
 from .shufflenet import *
 from .preact_resnet import *
+from .tiny import *
+from .acdc import *
+from .wide_resnet import *

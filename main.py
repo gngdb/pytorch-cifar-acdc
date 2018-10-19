@@ -18,8 +18,9 @@ from utils import progress_bar
 from prototypical import PrototypicalLoss
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--lr', default=0.2, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parser.add_argument('--eval', '-e', action='store_true', help='run only on test')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -51,7 +52,10 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 # Model
 print('==> Building model..')
 # net = VGG('VGG19')
-net = ResNet18()
+# net = ResNet18()
+# net = ACDCResNet18()
+net = AllConvACDC()
+# net = OldAllConvACDC()
 # net = PreActResNet18()
 # net = GoogLeNet()
 # net = DenseNet121()
@@ -75,8 +79,11 @@ if args.resume:
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 
-criterion = PrototypicalLoss()
-optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+
+criterion = nn.CrossEntropyLoss()
+#optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=8.8e-6)
+optimizer = optim.Adam(net.parameters(), lr=0.002)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, 10)
 
 # Training
 def train(epoch):
@@ -136,7 +143,23 @@ def test(epoch):
         torch.save(state, './checkpoint/ckpt.t7')
         best_acc = acc
 
+def sgdr_step(scheduler):
+    scheduler.step()
+    if scheduler.last_epoch == scheduler.T_max:
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, 2*scheduler.T_max)
+        scheduler.step()
+    return scheduler
 
-for epoch in range(start_epoch, start_epoch+200):
-    train(epoch)
+if start_epoch > 0:
+    for i in range(start_epoch):
+        scheduler = sgdr_step(scheduler)
+
+for epoch in range(start_epoch, start_epoch+500):
+    scheduler = sgdr_step(scheduler)
+    if not args.eval:
+        train(epoch)
+    else:
+        print("Loaded at epoch:", epoch)
     test(epoch)
+    if args.eval:
+        break
