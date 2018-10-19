@@ -53,7 +53,9 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 print('==> Building model..')
 # net = VGG('VGG19')
 # net = ResNet18()
-net = ACDCResNet18()
+# net = ACDCResNet18()
+net = AllConvACDC()
+# net = OldAllConvACDC()
 # net = PreActResNet18()
 # net = GoogLeNet()
 # net = DenseNet121()
@@ -78,8 +80,8 @@ if args.resume:
     start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-5)
-#optimizer = optim.Adam(net.parameters(), lr=0.002)
+#optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=8.8e-6)
+optimizer = optim.Adam(net.parameters(), lr=0.002)
 scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, 10)
 
 # Training

@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch_dct.layers import FastStackedConvACDC as StackedConvACDC
+from pytorch_acdc.layers import FastStackedConvACDC as StackedConvACDC
 
 
 class BasicBlock(nn.Module):
