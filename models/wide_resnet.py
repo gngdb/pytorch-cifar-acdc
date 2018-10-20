@@ -6,10 +6,8 @@ import torch.nn.functional as F
 
 from torch.autograd import Variable
 
-Conv = nn.Conv2d
-
 class BasicBlock(nn.Module):
-    def __init__(self, in_planes, out_planes, stride, dropRate=0.0, conv=Conv):
+    def __init__(self, in_planes, out_planes, stride, dropRate=0.0, conv=nn.Conv2d):
         super(BasicBlock, self).__init__()
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.relu1 = nn.ReLU(inplace=True)
@@ -21,7 +19,7 @@ class BasicBlock(nn.Module):
                                padding=1, bias=False)
         self.droprate = dropRate
         self.equalInOut = (in_planes == out_planes)
-        self.convShortcut = (not self.equalInOut) and nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride,
+        self.convShortcut = (not self.equalInOut) and Conv(in_planes, out_planes, kernel_size=1, stride=stride,
                                padding=0, bias=False) or None
     def forward(self, x):
         if not self.equalInOut:
@@ -36,7 +34,7 @@ class BasicBlock(nn.Module):
 
 
 class NetworkBlock(nn.Module):
-    def __init__(self, nb_layers, in_planes, out_planes, block, stride, dropRate=0.0, conv = Conv):
+    def __init__(self, nb_layers, in_planes, out_planes, block, stride, dropRate=0.0, conv = nn.Conv2d):
         super(NetworkBlock, self).__init__()
         self.layer = self._make_layer(block, in_planes, out_planes, nb_layers, stride, dropRate, conv)
     def _make_layer(self, block, in_planes, out_planes, nb_layers, stride, dropRate, conv):
@@ -49,7 +47,7 @@ class NetworkBlock(nn.Module):
 
 
 class BasicBlock(nn.Module):
-    def __init__(self, in_planes, out_planes, stride, dropRate=0.0, conv=Conv):
+    def __init__(self, in_planes, out_planes, stride, dropRate=0.0, conv=nn.Conv2d):
         super(BasicBlock, self).__init__()
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.relu1 = nn.ReLU(inplace=True)
@@ -61,7 +59,7 @@ class BasicBlock(nn.Module):
                                padding=1, bias=False)
         self.droprate = dropRate
         self.equalInOut = (in_planes == out_planes)
-        self.convShortcut = (not self.equalInOut) and nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride,
+        self.convShortcut = (not self.equalInOut) and conv(in_planes, out_planes, kernel_size=1, stride=stride,
                                padding=0, bias=False) or None
     def forward(self, x):
         if not self.equalInOut:
@@ -87,7 +85,7 @@ class WideResNet(nn.Module):
         assert n % s == 0, 'n mod s must be zero'
 
         # 1st conv before any network block
-        self.conv1 = nn.Conv2d(3, nChannels[0], kernel_size=3, stride=1,
+        self.conv1 = conv(3, nChannels[0], kernel_size=3, stride=1,
                                padding=1, bias=False)
         # 1st block
         self.block1 = torch.nn.ModuleList()
@@ -144,10 +142,10 @@ class WideResNet(nn.Module):
         return self.fc(out), activations
 
 def WideResNetDefault(depth, width):
-    return WideResNet(depth,width,Conv,BasicBlock)
+    return WideResNet(depth,width,nn.Conv2d,BasicBlock)
 
 def test():
-    net = WideResNet(40,2,Conv,BasicBlock)
+    net = WideResNet(40,2,nn.Conv2d,BasicBlock)
     x = torch.randn(1,3,32,32)
     y, _ = net(Variable(x))
     print(y.size())
