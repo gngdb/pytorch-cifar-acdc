@@ -13,6 +13,7 @@ import operator
 count_ops = 0
 count_params = 0
 
+ignored_modules = []
 
 def get_num_gen(gen):
     return sum(1 for x in gen)
@@ -139,7 +140,9 @@ def measure_layer(layer, x):
 
     ### unknown layer type
     else:
-        raise TypeError('unknown layer type: %s' % type_name)
+        if type_name not in ignored_modules:
+            ignored_modules.append(type_name)
+        #raise TypeError('unknown layer type: %s' % type_name)
 
     count_ops += delta_ops
     count_params += delta_params
@@ -155,20 +158,18 @@ def measure_model(model, H, W):
     def should_measure(x):
         return is_leaf(x) or is_pruned(x) or is_acdc(x)
 
-    # this is a dangerous recursive function
     def modify_forward(model):
-        for child in model.children():
-            if should_measure(child):
-                def new_forward(m):
-                    def lambda_forward(x):
-                        measure_layer(m, x)
-                        return m.old_forward(x)
-                    return lambda_forward
-                child.old_forward = child.forward
-                child.forward = new_forward(child)
-            else:
-                modify_forward(child)
+        for child in model.modules():
+            #if should_measure(child):
+            def new_forward(m):
+                def lambda_forward(x):
+                    measure_layer(m, x)
+                    return m.old_forward(x)
+                return lambda_forward
+            child.old_forward = child.forward
+            child.forward = new_forward(child)
 
+    # recursive function
     def restore_forward(model):
         for child in model.children():
             # leaf node
@@ -180,7 +181,7 @@ def measure_model(model, H, W):
 
     modify_forward(model)
     model.forward(data)
-    restore_forward(model)
+    #restore_forward(model)
 
     return count_ops, count_params
 
@@ -213,3 +214,5 @@ if __name__ == '__main__':
     model = WideResNetACDC(40,2)
     flops, params = measure_model(model, 32, 32)
     print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
+
+    print("Ignored modules (no FLOPs to count): ", ignored_modules)
