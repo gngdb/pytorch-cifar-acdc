@@ -188,23 +188,24 @@ def measure_model(model, H, W):
 if __name__ == '__main__':
     from models import *
 
-    print("Tiny ConvNet\tFLOPS\t\tparams")
-    model = AllConv()
-    flops, params = measure_model(model, 32, 32)
-    print("  Original:\t%.5E\t%.5E"%(flops, params))
+    if False:
+        print("Tiny ConvNet\tFLOPS\t\tparams")
+        model = AllConv()
+        flops, params = measure_model(model, 32, 32)
+        print("  Original:\t%.5E\t%.5E"%(flops, params))
 
-    model = AllConvACDC()
-    flops, params = measure_model(model, 32, 32)
-    print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
+        model = AllConvACDC()
+        flops, params = measure_model(model, 32, 32)
+        print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
 
-    print("ResNet18\tFLOPS\t\tparams")
-    model = ResNet18()
-    flops, params = measure_model(model, 32, 32)
-    print("  Original:\t%.5E\t%.5E"%(flops, params))
+        print("ResNet18\tFLOPS\t\tparams")
+        model = ResNet18()
+        flops, params = measure_model(model, 32, 32)
+        print("  Original:\t%.5E\t%.5E"%(flops, params))
 
-    model = ACDCResNet18()
-    flops, params = measure_model(model, 32, 32)
-    print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
+        model = ACDCResNet18()
+        flops, params = measure_model(model, 32, 32)
+        print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
 
     print("WRN(40,2)\tFLOPS\t\tparams")
     model = WideResNetDefault(40,2)
