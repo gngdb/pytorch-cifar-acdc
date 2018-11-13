@@ -7,6 +7,7 @@ from .resnext import *
 from .densenet import *
 from .googlenet import *
 from .mobilenet import *
+from .mobilenetv2 import *
 from .shufflenet import *
 from .preact_resnet import *
 from .tiny import *

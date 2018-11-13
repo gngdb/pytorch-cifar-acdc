@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from pytorch_acdc.layers import FastStackedConvACDC as StackedConvACDC
+
 
 class Block(nn.Module):
     '''Depthwise conv + Pointwise conv'''
@@ -15,6 +17,22 @@ class Block(nn.Module):
         self.conv1 = nn.Conv2d(in_planes, in_planes, kernel_size=3, stride=stride, padding=1, groups=in_planes, bias=False)
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.conv2 = nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_planes)
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn2(self.conv2(out)))
+        return out
+
+
+class ACDCBlock(nn.Module):
+    '''Depthwise conv + Pointwise conv'''
+    def __init__(self, in_planes, out_planes, stride=1):
+        super(ACDCBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_planes, in_planes, kernel_size=3, stride=stride, padding=1, groups=in_planes, bias=False)
+        self.bn1 = nn.BatchNorm2d(in_planes)
+        #self.conv2 = nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
+        self.conv2 =  StackedConvACDC(in_planes, out_planes, kernel_size=1, n_layers=12, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(out_planes)
 
     def forward(self, x):
@@ -34,12 +52,12 @@ class MobileNet(nn.Module):
         self.layers = self._make_layers(in_planes=32)
         self.linear = nn.Linear(1024, num_classes)
 
-    def _make_layers(self, in_planes):
+    def _make_layers(self, in_planes, BlockClass=Block):
         layers = []
         for x in self.cfg:
             out_planes = x if isinstance(x, int) else x[0]
             stride = 1 if isinstance(x, int) else x[1]
-            layers.append(Block(in_planes, out_planes, stride))
+            layers.append(BlockClass(in_planes, out_planes, stride))
             in_planes = out_planes
         return nn.Sequential(*layers)
 
@@ -50,6 +68,11 @@ class MobileNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+
+
+class ACDCMobileNet(MobileNet):
+    def _make_layers(self, in_planes):
+        return super(ACDCMobileNet, self)._make_layers(in_planes, BlockClass=ACDCBlock)
 
 
 def test():

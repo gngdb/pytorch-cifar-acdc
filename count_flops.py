@@ -164,7 +164,11 @@ def measure_model(model, H, W):
             def new_forward(m):
                 def lambda_forward(x):
                     measure_layer(m, x)
-                    return m.old_forward(x)
+                    try:
+                        return m.old_forward(x)
+                    except NotImplementedError as e:
+                        print(m)
+                        raise e
                 return lambda_forward
             child.old_forward = child.forward
             child.forward = new_forward(child)
@@ -207,13 +211,32 @@ if __name__ == '__main__':
         flops, params = measure_model(model, 32, 32)
         print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
 
-    print("WRN(40,2)\tFLOPS\t\tparams")
-    model = WideResNetDefault(40,2)
+        print("WRN(40,2)\tFLOPS\t\tparams")
+        model = WideResNetDefault(40,2)
+        flops, params = measure_model(model, 32, 32)
+        print("  Original:\t%.5E\t%.5E"%(flops, params))
+
+        model = WideResNetACDC(40,2)
+        flops, params = measure_model(model, 32, 32)
+        print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
+
+    print("MobileNetv2\tFLOPS\t\tparams")
+    model = MobileNetV2()
     flops, params = measure_model(model, 32, 32)
     print("  Original:\t%.5E\t%.5E"%(flops, params))
 
-    model = WideResNetACDC(40,2)
+    model = ACDCMobileNetV2()
     flops, params = measure_model(model, 32, 32)
     print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
+
+    print("MobileNet\tFLOPS\t\tparams")
+    model = MobileNet()
+    flops, params = measure_model(model, 32, 32)
+    print("  Original:\t%.5E\t%.5E"%(flops, params))
+
+    model = ACDCMobileNet()
+    flops, params = measure_model(model, 32, 32)
+    print("  ACDC:\t\t%.5E\t%.5E"%(flops, params))
+
 
     print("Ignored modules (no FLOPs to count): ", ignored_modules)
